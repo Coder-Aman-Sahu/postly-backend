@@ -10,6 +10,8 @@ const contentRoutes = require('./routes/content.routes');
 
 const postsRoutes = require('./routes/posts.routes');
 
+const bot = require('./bot');
+
 const app = express();
 
 // Middlewares
@@ -23,6 +25,13 @@ app.use('/api/user', userRoutes);
 
 app.use('/api/content', contentRoutes);
 app.use('/api/posts', postsRoutes);
+
+
+app.post('/api/bot/webhook', express.json(), (req, res) => {
+  bot.processUpdate(req.body);
+  res.sendStatus(200);
+});
+
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
