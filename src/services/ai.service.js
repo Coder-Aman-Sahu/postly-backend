@@ -9,7 +9,7 @@ exports.generateContent = async (userId, { idea, post_type, platforms, tone, lan
   
   const systemPrompt = `You are an expert social media manager. Create content for the following idea: "${idea}". 
   Tone: ${tone}. Language: ${language}. Type: ${post_type}.
-  Target platforms: ${(platforms || []).join(', ')}.
+  Target platforms: ${platforms.join(', ')}.
   Rules:
   - Twitter: max 280 chars, 2-3 hashtags.
   - LinkedIn: 800-1300 chars, professional.
@@ -24,7 +24,13 @@ exports.generateContent = async (userId, { idea, post_type, platforms, tone, lan
       messages: [{ role: "system", content: systemPrompt }],
       response_format: { type: "json_object" }
     });
-    return JSON.parse(response.choices[0].message.content);
+    
+    // Extract actual tokens used
+    return {
+      generated: JSON.parse(response.choices[0].message.content).generated,
+      tokens_used: response.usage.total_tokens
+    };
+
   } else if (model.includes('claude')) {
     const anthropic = new Anthropic({ apiKey: keys?.anthropic_key_enc ? decrypt(keys.anthropic_key_enc) : process.env.DEFAULT_ANTHROPIC_KEY });
     const response = await anthropic.messages.create({
@@ -33,6 +39,11 @@ exports.generateContent = async (userId, { idea, post_type, platforms, tone, lan
       system: systemPrompt,
       messages: [{ role: "user", content: "Generate the JSON response now." }]
     });
-    return JSON.parse(response.content[0].text);
+    
+    // Extract actual tokens used
+    return {
+      generated: JSON.parse(response.content[0].text).generated,
+      tokens_used: response.usage.input_tokens + response.usage.output_tokens
+    };
   }
 };

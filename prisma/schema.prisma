@@ -55,6 +55,8 @@ model Post {
   status         String         @default("queued") // queued, processing, completed, failed
   user           User           @relation(fields: [user_id], references: [id])
   platform_posts PlatformPost[]
+
+  @@index([user_id]) 
 }
 
 model PlatformPost {
@@ -67,4 +69,7 @@ model PlatformPost {
   error_message String?
   attempts      Int       @default(0)
   post          Post      @relation(fields: [post_id], references: [id])
+
+  @@index([post_id]) 
+  @@index([status])  
 }
