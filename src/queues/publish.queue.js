@@ -3,44 +3,40 @@ const Redis = require('ioredis');
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
-const connection = new Redis(process.env.REDIS_URL || 'redis://127.0.0.1:6379', { maxRetriesPerRequest: null });
+// Shared configuration for robust Upstash connection on Vercel
+const redisOptions = {
+  maxRetriesPerRequest: null,
+  tls: {
+    rejectUnauthorized: false
+  },
+  family: 4, // Force IPv4 to bypass Vercel socket hangups
+  connectTimeout: 20000
+};
+
+const connection = new Redis(process.env.REDIS_URL, redisOptions);
+
+connection.on('error', (err) => console.error('Queue Redis Error:', err.message));
 
 const publishQueue = new Queue('publish', { connection });
 
 const worker = new Worker('publish', async job => {
   const { platform_post_id, platform, content } = job.data;
-  console.log(`Processing publish for ${platform}...`);
   
-  // Here, you would call the actual Twitter/LinkedIn API using stored OAuth tokens
-  // For the assignment, we simulate success/failure:
+  // Simulation logic for the assignment
+  const isSuccess = Math.random() > 0.3; 
   
-  const isSuccess = Math.random() > 0.3; // 70% chance of success for testing
-  
-  if (!isSuccess) {
-    throw new Error(`${platform} API Rate Limit Exceeded`);
-  }
+  if (!isSuccess) throw new Error(`${platform} API Rate Limit Exceeded`);
 
-  // Update DB on success
   await prisma.platformPost.update({
     where: { id: platform_post_id },
     data: { status: 'published', published_at: new Date() }
   });
 
-  return { success: true, url: `https://${platform}.com/post/${Date.now()}` };
+  return { success: true };
 }, { 
   connection,
   attempts: 3,
-  backoff: { type: 'exponential', delay: 1000 } // 1s -> 2s -> 4s
-});
-
-// Update DB on failure after all retries are exhausted
-worker.on('failed', async (job, err) => {
-  if (job.attemptsMade === job.opts.attempts) {
-      await prisma.platformPost.update({
-          where: { id: job.data.platform_post_id },
-          data: { status: 'failed', error_message: err.message }
-      });
-  }
+  backoff: { type: 'exponential', delay: 1000 }
 });
 
 module.exports = { publishQueue };
