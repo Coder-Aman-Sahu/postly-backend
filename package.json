@@ -16,6 +16,7 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.91.1",
     "@prisma/client": "^5.22.0",
+    "@upstash/redis": "^1.37.0",
     "bcrypt": "^6.0.0",
     "bullmq": "^5.76.3",
     "cors": "^2.8.6",
